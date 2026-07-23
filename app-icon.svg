@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024" width="1024" height="1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#3567CE"/>
+      <stop offset="1" stop-color="#22488F"/>
+    </linearGradient>
+  </defs>
+
+  <!-- 背景 -->
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+
+  <!-- 月曆卡片 -->
+  <rect x="212" y="260" width="600" height="560" rx="48" fill="#FFFFFF"/>
+  <!-- 月曆頂欄（上圓角、下平） -->
+  <path d="M 212 308 a 48 48 0 0 1 48 -48 h 504 a 48 48 0 0 1 48 48 v 84 h -600 z" fill="#DCE7FB"/>
+
+  <!-- 兩個吊環 -->
+  <line x1="372" y1="200" x2="372" y2="330" stroke="#22488F" stroke-width="44" stroke-linecap="round"/>
+  <line x1="652" y1="200" x2="652" y2="330" stroke="#22488F" stroke-width="44" stroke-linecap="round"/>
+
+  <!-- 日期格 4x3 -->
+  <g fill="#C9D6EE">
+    <rect x="309" y="452" width="76" height="76" rx="18"/>
+    <rect x="419" y="452" width="76" height="76" rx="18"/>
+    <rect x="529" y="452" width="76" height="76" rx="18"/>
+    <rect x="639" y="452" width="76" height="76" rx="18"/>
+    <rect x="309" y="562" width="76" height="76" rx="18"/>
+    <rect x="419" y="562" width="76" height="76" rx="18"/>
+    <rect x="639" y="562" width="76" height="76" rx="18"/>
+    <rect x="309" y="672" width="76" height="76" rx="18"/>
+    <rect x="419" y="672" width="76" height="76" rx="18"/>
+  </g>
+  <!-- 標記的回診日（綠色） -->
+  <rect x="529" y="562" width="76" height="76" rx="18" fill="#1C8555"/>
+
+  <!-- 藥丸（膠囊，斜放，蓋在卡片右下） -->
+  <g transform="rotate(-30 762 742)">
+    <rect x="612" y="677" width="300" height="130" rx="65" fill="#FFFFFF" stroke="#22488F" stroke-width="16"/>
+    <path d="M 762 677 h 85 a 65 65 0 0 1 65 65 a 65 65 0 0 1 -65 65 h -85 z" fill="#57BE8B"/>
+    <rect x="612" y="677" width="300" height="130" rx="65" fill="none" stroke="#22488F" stroke-width="16"/>
+  </g>
+</svg>

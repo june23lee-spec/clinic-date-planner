@@ -152,6 +152,11 @@
 
   footer.foot{margin-top:22px;text-align:center;font-size:11.5px;color:var(--ink-faint);line-height:1.7}
 
+  .sheet-link{margin-top:20px;text-align:center;font-size:13.5px;color:var(--ink-faint)}
+  .sheet-link a{color:var(--accent);font-weight:700;text-decoration:none;
+    border-bottom:1.5px solid var(--accent-soft);padding-bottom:1px}
+  .sheet-link a:hover{border-bottom-color:var(--accent)}
+
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 </head>
@@ -201,6 +206,10 @@
     <button class="go" id="refill-go" type="button">推算預估藥物用完日</button>
   </div>
   <div id="refill-result" aria-live="polite"></div>
+
+  <p class="sheet-link">
+    要印給診間的整張回診日期表 → <a href="./sheet.html">今日回診日期表</a>
+  </p>
 
   <footer class="foot">
     單一檔案、離線可用<br>推算結果為排程輔助，實際處方與健保規定仍以你的臨床判斷為準

@@ -1,9 +1,10 @@
 /* 約診日期推算 — 離線小管家（service worker）
    改版時把 CACHE 版本號往上加一號（例如 cdp-v4），使用者一開就會自動換新版。 */
-const CACHE = "cdp-v4";
+const CACHE = "cdp-v6";
 const ASSETS = [
   "./",
   "./index.html",
+  "./sheet.html",
   "./manifest.webmanifest",
   "./icon-180.png",
   "./icon-192.png",

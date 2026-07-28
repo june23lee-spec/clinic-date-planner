@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>今日回診日期表</title>
+
+<link rel="manifest" href="./manifest.webmanifest">
+<meta name="theme-color" content="#2D5BB8">
+
+<style>
+  /* 介面顏色跟著系統深淺色走。下方的紙張預覽永遠白底黑字 —— 那是紙，不跟著換色。 */
+  :root{
+    --bg:#F4F6FA; --card:#FFFFFF; --card-2:#FAFBFD;
+    --ink:#1B2430; --ink-soft:#5A6675; --ink-faint:#8C97A6;
+    --line:#E4E8F0;
+    --accent:#2D5BB8; --accent-ink:#22488F; --accent-soft:#E9EFFB;
+    --warn:#C0392B;
+    --shadow:0 1px 2px rgba(20,30,50,.05),0 8px 24px rgba(20,30,50,.05);
+    --radius:14px;
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#12161C; --card:#1A2029; --card-2:#161C24;
+      --ink:#E7ECF3; --ink-soft:#A6B1C0; --ink-faint:#6E7B8B;
+      --line:#2A323D;
+      --accent:#6E98EE; --accent-ink:#A0BDF6; --accent-soft:#20304C;
+      --warn:#FF9182;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 28px rgba(0,0,0,.4);
+    }
+  }
+  :root[data-theme="light"]{
+    --bg:#F4F6FA; --card:#FFFFFF; --card-2:#FAFBFD;
+    --ink:#1B2430; --ink-soft:#5A6675; --ink-faint:#8C97A6;
+    --line:#E4E8F0;
+    --accent:#2D5BB8; --accent-ink:#22488F; --accent-soft:#E9EFFB;
+    --warn:#C0392B;
+    --shadow:0 1px 2px rgba(20,30,50,.05),0 8px 24px rgba(20,30,50,.05);
+  }
+  :root[data-theme="dark"]{
+    --bg:#12161C; --card:#1A2029; --card-2:#161C24;
+    --ink:#E7ECF3; --ink-soft:#A6B1C0; --ink-faint:#6E7B8B;
+    --line:#2A323D;
+    --accent:#6E98EE; --accent-ink:#A0BDF6; --accent-soft:#20304C;
+    --warn:#FF9182;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 28px rgba(0,0,0,.4);
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--bg); color:var(--ink);
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC","Heiti TC",sans-serif;
+    line-height:1.6; -webkit-font-smoothing:antialiased;
+    padding:22px 15px 56px;
+  }
+  .wrap{max-width:940px;margin:0 auto}
+
+  h1{font-size:27px;font-weight:800;letter-spacing:.01em;margin-bottom:16px}
+
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+    box-shadow:var(--shadow);padding:18px 20px;display:flex;flex-direction:column;gap:13px;
+    margin-bottom:24px}
+  .row{display:flex;flex-wrap:wrap;gap:11px;align-items:center}
+
+  button{font:inherit;font-size:18px;font-weight:700;cursor:pointer;
+    background:var(--card-2);color:var(--ink);border:1px solid var(--line);
+    border-radius:11px;padding:13px 26px;transition:.12s}
+  button:hover{border-color:var(--accent);color:var(--accent-ink)}
+  button.on{background:var(--accent-soft);border-color:var(--accent);color:var(--accent-ink)}
+  button.primary{background:var(--accent);border-color:var(--accent);color:#fff;
+    font-size:19px;padding:14px 42px;margin-left:14px}
+  button.primary:hover{background:var(--accent-ink);color:#fff}
+  input[type=date]{font:inherit;font-size:19px;font-weight:700;color:var(--ink);
+    background:var(--card-2);border:1px solid var(--line);border-radius:11px;
+    padding:12px 16px;font-variant-numeric:tabular-nums}
+  input:focus,button:focus-visible{outline:none;border-color:var(--accent);
+    box-shadow:0 0 0 3px var(--accent-soft)}
+
+  .notice{font-size:14.5px;color:var(--warn);font-weight:700}
+  .footlink{margin-top:26px;font-size:13px;color:var(--ink-faint);text-align:center}
+  .footlink a{color:var(--accent);font-weight:700}
+
+  /* ── 預覽區：把實際 A4 版面縮小顯示 ───────────────── */
+  .preview-outer{overflow:hidden}
+  .preview{transform-origin:top left}
+  /* 寬度要寫死成版面實際寬度，fit() 才量得到真實尺寸算縮放比 */
+  .paper{width:19cm;background:#fff;
+    box-shadow:0 2px 6px rgba(20,30,50,.12),0 14px 40px rgba(20,30,50,.14);
+    margin:0 auto}
+
+  /* ── A4 版面本體（列印與預覽共用） ───────────────── */
+  .page{
+    /* A4 21×29.7 扣掉四邊 1cm 邊界 = 19×27.7；高度收 0.2cm，
+       留給印表機的捨入誤差，否則會被擠出一張空白頁。 */
+    width:19cm; height:27.5cm;
+    /* 一頁排幾欄幾列（欄數決定每格寬度，也就決定字能放多大） */
+    --cols:3; --rows:2;
+    display:grid;
+    grid-template-columns:repeat(var(--cols),1fr);
+    grid-template-rows:repeat(var(--rows),1fr);
+    background:#fff;
+  }
+  .slip{
+    /* 全部字級都由 --fs 這一個數字帶動（其餘用 em），要放大縮小改這裡就好。
+       實測上限 26.5pt（一頁 6 張時），再大就會爆框；現用 23pt。
+       ⚠️ 動這個數字之後一定要重量一次，別憑感覺調：卡住的是高度，
+          但 10–12 月兩位數日期加假日標記時會換成寬度先卡。 */
+    --fs:23pt;
+    border:1px solid #000; margin:-.5px 0 0 -.5px;   /* 相鄰邊框重疊成單線，好對齊裁切 */
+    /* 上下留白用 em（跟著字級縮放），左右用 cm（那是裁切邊界，不該跟著字變） */
+    padding:.46em .24cm .33em .26cm;
+    display:flex; flex-direction:column;
+    font-family:"Times New Roman","標楷體","DFKai-SB","BiauKai",serif;
+    font-size:var(--fs); color:#000; line-height:1.18; overflow:hidden;
+  }
+  /* 標題：日期是主角，「今日」退為小字 */
+  .slip-head{white-space:nowrap;letter-spacing:.01em;padding-bottom:.13em;
+    border-bottom:1.5px solid #000}
+  .slip-head .tag{font-size:.58em}
+  .slip-head .big{font-size:1.04em;font-weight:700}
+  .slip-head .wd{font-size:.69em;font-weight:700}
+
+  .grp{display:grid;grid-template-columns:max-content 1fr;column-gap:.3em;align-items:baseline}
+  .grp .lb{text-align:right;white-space:nowrap}
+  .grp .dt{white-space:nowrap;font-variant-numeric:tabular-nums}
+  /* 假日標記做成黑底反白：門診印表機多為黑白，紅字會變成看不出來的淡灰 */
+  .grp .hol{font-size:.4em;font-weight:700;margin-left:.2em;
+    background:#000;color:#fff;padding:.02em .2em .1em;border-radius:.15em;
+    vertical-align:.18em;letter-spacing:.02em}
+
+  .grp-w{font-size:1em;row-gap:.12em;margin-top:.50em}
+  .grp-m{font-size:1.08em;font-weight:700;row-gap:.24em;margin-top:.63em}
+  .grp-x{font-size:1.08em;font-weight:700;margin-top:.53em;padding-top:.22em;
+    border-top:1px solid #000}
+
+  .slip-note{margin-top:auto;font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;
+    font-size:.40em;font-weight:700;color:#000;line-height:1.35;padding-top:.35em;
+    border-top:1px dashed #000}
+  .slip-note.dim{color:#8C97A6;font-weight:400;font-size:.35em;border-top-color:#B9C1CC}
+  .slip-note.tight{font-size:.365em;line-height:1.28}  /* 一次撞到三個以上假日時縮一點 */
+
+  @media (prefers-reduced-motion:reduce){*{transition:none !important}}
+
+  /* ── 列印 ─────────────────────────────────────── */
+  @media print{
+    @page{size:A4 portrait;margin:1cm}
+    html,body{background:#fff;padding:0;margin:0}
+    .wrap{max-width:none}
+    h1,.panel,.footlink{display:none !important}
+    /* 螢幕預覽用的縮放與外框高度是 JS 寫的行內樣式，列印時要全部歸零 */
+    .preview-outer{overflow:visible;height:auto !important}
+    .preview{transform:none !important}
+    .paper{box-shadow:none;margin:0}
+    *{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>今日回診日期表</h1>
+
+  <div class="panel">
+    <div class="row">
+      <button id="b-today" class="on">今天</button>
+      <input type="date" id="d-pick">
+      <button class="primary" id="b-print">列印</button>
+    </div>
+    <div class="notice" id="warn" hidden></div>
+  </div>
+
+  <div class="preview-outer">
+    <div class="preview" id="preview"></div>
+  </div>
+
+  <p class="footlink">要算單一個病人的日期 → <a href="./index.html">約診日期推算</a></p>
+</div>
+
+<script>
+/* ── 回診間隔 ────────────────────────────────────────────────
+   從門診原本的 Word 表反推：1M／2M／3M 是 4／8／12 週，不是日曆月。
+   因為全部都是 7 的倍數，每個回診日都會落在跟「今日」同一個星期幾。 */
+var GRP_W = [ {lb:"1W", d:7},  {lb:"2W", d:14}, {lb:"3W", d:21} ];
+var GRP_M = [ {lb:"1M", d:28}, {lb:"2M", d:56}, {lb:"3M", d:84} ];
+var GRP_X = [ {lb:"91天", d:91} ];
+
+/* 一張 A4 印 6 張，裁開發給診間。 */
+var COUNT = 6;
+
+/* ── 國定假日對照 ────────────────────────────────────────────
+   來源：行政院人事行政總處「政府行政機關辦公日曆表」。
+   只收「有名稱的放假日」（國定假日與補假）；純週六日不收，
+   否則週六門診的表會整排被標成假日。
+   ⚠️ 每年更新：人事行政總處約在前一年年中公布次年行事曆，
+      屆時把新一年的日期補進來，並把下面的 HOLIDAY_UNTIL 一起改。 */
+var HOLIDAY_UNTIL = 20271231;
+var HOLIDAY = {
+  // 民國 115 年（西元 2026）
+  "20260101":"開國紀念日", "20260215":"小年夜", "20260216":"農曆除夕", "20260217":"春節",
+  "20260218":"春節", "20260219":"春節", "20260220":"補假", "20260227":"補假",
+  "20260228":"和平紀念日", "20260403":"補假", "20260404":"兒童節", "20260405":"清明節",
+  "20260406":"補假", "20260501":"勞動節", "20260619":"端午節", "20260925":"中秋節",
+  "20260928":"孔子誕辰紀念日/教師節", "20261009":"補假", "20261010":"國慶日",
+  "20261025":"臺灣光復暨金門古寧頭大捷紀念日", "20261026":"補假", "20261225":"行憲紀念日",
+  // 民國 116 年（西元 2027）
+  "20270101":"開國紀念日", "20270204":"小年夜", "20270205":"農曆除夕", "20270206":"春節",
+  "20270207":"春節", "20270208":"春節", "20270209":"補假", "20270210":"補假",
+  "20270228":"和平紀念日", "20270301":"補假", "20270404":"兒童節", "20270405":"清明節",
+  "20270406":"補假", "20270430":"補假", "20270501":"勞動節", "20270609":"端午節",
+  "20270915":"中秋節", "20270928":"孔子誕辰紀念日/教師節", "20271010":"國慶日",
+  "20271011":"補假", "20271025":"臺灣光復暨金門古寧頭大捷紀念日", "20271224":"補假",
+  "20271225":"行憲紀念日", "20271231":"補假"
+};
+
+/* ── 日期工具（一律用本地午夜 Date，不做字串解析，避開時區陷阱） ── */
+var WD = ["日","一","二","三","四","五","六"];
+function midnight(dt){ return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate()); }
+function addDays(dt, n){ return new Date(dt.getFullYear(), dt.getMonth(), dt.getDate() + n); }
+function pad2(n){ return (n < 10 ? "0" : "") + n; }
+function key(dt){ return "" + dt.getFullYear() + pad2(dt.getMonth()+1) + pad2(dt.getDate()); }
+function md(dt){ return (dt.getMonth()+1) + "/" + dt.getDate(); }
+function iso(dt){ return dt.getFullYear() + "-" + pad2(dt.getMonth()+1) + "-" + pad2(dt.getDate()); }
+function holidayOf(dt){ return HOLIDAY[key(dt)] || null; }
+
+/* ── 狀態 ───────────────────────────────────────────────── */
+/* 網址可帶日期存成書籤：?d=2026-09-25（省略就是今天） */
+var base = midnight(new Date());
+var qd = (new URLSearchParams(location.search).get('d') || "").split('-');
+if (qd.length === 3 && qd.every(function(x){ return /^\d+$/.test(x); })){
+  var cand = new Date(Number(qd[0]), Number(qd[1]) - 1, Number(qd[2]));
+  if (!isNaN(cand) && cand.getMonth() === Number(qd[1]) - 1) base = cand;  // 擋掉 2/30 這種
+}
+
+/* ── 畫一張卡 ───────────────────────────────────────────── */
+function rowsHtml(list, cls, notes){
+  var h = '<div class="grp ' + cls + '">';
+  for (var i = 0; i < list.length; i++){
+    var dt  = addDays(base, list[i].d);
+    var hol = holidayOf(dt);
+    if (hol) notes.push(md(dt) + " " + hol);
+    h += '<div class="lb">' + list[i].lb + '</div>'
+       + '<div class="dt">' + md(dt) + (hol ? '<span class="hol">假</span>' : '') + '</div>';
+  }
+  return h + '</div>';
+}
+
+function slipHtml(){
+  var notes = [];
+  var headHol = holidayOf(base);
+
+  // 「今日」若本身就是假日，註記寫在下方；不塞進標題，否則兩位數月份會撐爆卡片寬度
+  if (headHol) notes.push(md(base) + " " + headHol);
+
+  var head = '<div class="slip-head">'
+           + '<span class="tag">今日 </span>'
+           + '<span class="big">' + md(base) + '</span>'
+           + '<span class="wd">（' + WD[base.getDay()] + '）</span>'
+           + '</div>';
+
+  var body = rowsHtml(GRP_W, 'grp-w', notes)
+           + rowsHtml(GRP_M, 'grp-m', notes)
+           + rowsHtml(GRP_X, 'grp-x', notes);
+
+  var note = '';
+  if (notes.length){
+    note = '<div class="slip-note' + (notes.length >= 3 ? ' tight' : '') + '">※ 休診：'
+         + notes.join('、') + '</div>';
+  } else if (Number(key(addDays(base, 91))) > HOLIDAY_UNTIL){
+    note = '<div class="slip-note dim">※ 假日對照僅至 '
+         + String(HOLIDAY_UNTIL).slice(0,4) + '/'
+         + String(HOLIDAY_UNTIL).slice(4,6) + '/'
+         + String(HOLIDAY_UNTIL).slice(6) + '</div>';
+  }
+
+  return '<div class="slip">' + head + body + note + '</div>';
+}
+
+/* ── 畫整份（一頁 6 張） ────────────────────────────────── */
+function render(){
+  var slip = slipHtml(), html = '<div class="paper"><div class="page">';
+  for (var i = 0; i < COUNT; i++) html += slip;
+  document.getElementById('preview').innerHTML = html + '</div></div>';
+
+  document.getElementById('d-pick').value = iso(base);
+  document.getElementById('b-today').classList
+    .toggle('on', key(base) === key(midnight(new Date())));
+
+  var w = document.getElementById('warn'), hol = holidayOf(base);
+  if (hol){ w.textContent = "⚠️ " + md(base) + " 是「" + hol + "」，這天休診。"; w.hidden = false; }
+  else { w.hidden = true; }
+
+  fit();
+}
+
+/* 預覽縮放：把 19cm 寬的實際版面縮到視窗裝得下（只影響螢幕，不影響列印） */
+function fit(){
+  var outer = document.querySelector('.preview-outer');
+  var pv    = document.getElementById('preview');
+  var paper = pv.querySelector('.paper');
+  if (!paper) return;
+  pv.style.transform = 'none';
+  outer.style.height = 'auto';
+  var natural = paper.offsetWidth;
+  if (!natural || !outer.clientWidth) return;   // 分頁在背景時寬度會是 0，別算出 scale(0)
+  var s = Math.min(1, outer.clientWidth / natural);
+  pv.style.transform = 'scale(' + s + ')';
+  outer.style.height = (pv.offsetHeight * s) + 'px';
+}
+
+/* ── 操作 ───────────────────────────────────────────────── */
+document.getElementById('b-today').onclick = function(){
+  base = midnight(new Date()); render();
+};
+document.getElementById('d-pick').onchange = function(){
+  var v = this.value.split('-');
+  if (v.length === 3){
+    base = new Date(Number(v[0]), Number(v[1]) - 1, Number(v[2]));
+    render();
+  }
+};
+document.getElementById('b-print').onclick = function(){ window.print(); };
+window.addEventListener('resize', fit);
+
+render();
+
+if ('serviceWorker' in navigator){
+  window.addEventListener('load', function(){ navigator.serviceWorker.register('./sw.js'); });
+}
+</script>
+</body>
+</html>

@@ -228,7 +228,23 @@ function pad2(n){ return (n < 10 ? "0" : "") + n; }
 function key(dt){ return "" + dt.getFullYear() + pad2(dt.getMonth()+1) + pad2(dt.getDate()); }
 function md(dt){ return (dt.getMonth()+1) + "/" + dt.getDate(); }
 function iso(dt){ return dt.getFullYear() + "-" + pad2(dt.getMonth()+1) + "-" + pad2(dt.getDate()); }
-function holidayOf(dt){ return HOLIDAY[key(dt)] || null; }
+/* ── 「這天是不是休診」的唯一判斷 ─────────────────────────────
+   badge、休診註記、跳過邏輯共用這一個函式。
+
+   ⚠️ **「補假」一律照常看診**（使用者 2026-07-29 確認，含春節期間的補假）：
+      國定假日撞到週六日時，本院就是休那個週六日，政府往後補的那一天
+      **門診照常開** —— 員工是自己另外挑時間請補假，不是整院停診。
+      例：2027 初一(六)、初二(日) 撞週末 → 政府補 2/9(二)、2/10(三)，
+          但本院這兩天正常看診。
+      認名稱而不是列例外清單，所以之後補 2028 年資料時會自動適用，
+      不會有人忘了維護清單害護理師少發一天的卡。
+      ⚠️ 若哪天改成「補假也停診」，別忘了小年夜／除夕／春節那幾天本來就在
+         HOLIDAY 裡，不受這條影響。 */
+function holidayOf(dt){
+  var h = HOLIDAY[key(dt)];
+  if (!h || h === "補假") return null;
+  return h;
+}
 
 /* ── 挑「有看診的日子」（護理師 2026-07-29 指定：三張都要是有門診的日子）──
    跳過週日與國定假日。⚠️ 週六不跳 —— 家醫科週六有門診，跳掉會少一天。

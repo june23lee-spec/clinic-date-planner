@@ -76,7 +76,9 @@
   input:focus,button:focus-visible{outline:none;border-color:var(--accent);
     box-shadow:0 0 0 3px var(--accent-soft)}
 
-  .notice{font-size:14.5px;color:var(--warn);font-weight:700}
+  /* 跳過休診日的說明。刻意不用警告紅：週五、週六印的時候幾乎每次都會跳到週日，
+     每週都跳紅字會變成沒人看的雜訊。這是說明不是警告。 */
+  .notice{font-size:14.5px;color:var(--ink-soft);font-weight:700;line-height:1.5}
   .footlink{margin-top:26px;font-size:13px;color:var(--ink-faint);text-align:center}
   .footlink a{color:var(--accent);font-weight:700}
 
@@ -93,7 +95,9 @@
     /* A4 21×29.7 扣掉四邊 1cm 邊界 = 19×27.7；高度收 0.2cm，
        留給印表機的捨入誤差，否則會被擠出一張空白頁。 */
     width:19cm; height:27.5cm;
-    /* 一頁排幾欄幾列（欄數決定每格寬度，也就決定字能放多大） */
+    /* 一頁排幾欄幾列（欄數決定每格寬度，也就決定字能放多大）。
+       實際值由 JS 依 DAYS／PER_DAY 寫成行內樣式蓋過去，這裡只是備援值。
+       一欄＝一天，一欄裡上下兩張是同一天。 */
     --cols:3; --rows:2;
     display:grid;
     grid-template-columns:repeat(var(--cols),1fr);
@@ -184,8 +188,11 @@ var GRP_W = [ {lb:"1W", d:7},  {lb:"2W", d:14}, {lb:"3W", d:21} ];
 var GRP_M = [ {lb:"1M", d:28}, {lb:"2M", d:56}, {lb:"3M", d:84} ];
 var GRP_X = [ {lb:"91天", d:91} ];
 
-/* 一張 A4 印 6 張，裁開發給診間。 */
-var COUNT = 6;
+/* 一張 A4 印 6 張＝3 個看診日、每天上下兩張，裁開發給診間。
+   版面是 DAYS 欄 × PER_DAY 列，「同一欄＝同一天」（護理師 2026-07-29 指定的排法）。
+   ⚠️ 改這兩個數字會同時改變格子大小，字級上限（.slip 的 --fs）要重量。 */
+var DAYS    = 3;   // 一次印幾個看診日（＝欄數）
+var PER_DAY = 2;   // 每天印幾張（＝列數）
 
 /* ── 國定假日對照 ────────────────────────────────────────────
    來源：行政院人事行政總處「政府行政機關辦公日曆表」。
@@ -222,6 +229,25 @@ function md(dt){ return (dt.getMonth()+1) + "/" + dt.getDate(); }
 function iso(dt){ return dt.getFullYear() + "-" + pad2(dt.getMonth()+1) + "-" + pad2(dt.getDate()); }
 function holidayOf(dt){ return HOLIDAY[key(dt)] || null; }
 
+/* ── 挑「有看診的日子」（護理師 2026-07-29 指定：三張都要是有門診的日子）──
+   跳過週日與國定假日。⚠️ 週六不跳 —— 家醫科週六有門診，跳掉會少一天。
+   ⚠️ 假日資料只到 HOLIDAY_UNTIL，超過之後跳不掉還不知道的假日；
+      那種情況卡片下方本來就會自己標「假日對照僅至 …」。 */
+function isClinicDay(dt){ return dt.getDay() !== 0 && !holidayOf(dt); }
+
+/* 從 start 當天起（含當天）往後取 n 個看診日。
+   回傳的 skipped 是路上跳過的日子 —— 一定要顯示給使用者看，不能默默跳掉，
+   否則護理師只會看到「日期怎麼不連續」而不知道原因。
+   guard：春節連假＋週日最長也不過十幾天，400 純粹是防呆上限。 */
+function clinicDays(start, n){
+  var days = [], skipped = [], d = start, guard = 0;
+  while (days.length < n && guard++ < 400){
+    if (isClinicDay(d)) days.push(d); else skipped.push(d);
+    d = addDays(d, 1);
+  }
+  return { days: days, skipped: skipped };
+}
+
 /* ── 狀態 ───────────────────────────────────────────────── */
 /* 網址可帶日期存成書籤：?d=2026-09-25（省略就是今天） */
 var base = midnight(new Date());
@@ -231,11 +257,11 @@ if (qd.length === 3 && qd.every(function(x){ return /^\d+$/.test(x); })){
   if (!isNaN(cand) && cand.getMonth() === Number(qd[1]) - 1) base = cand;  // 擋掉 2/30 這種
 }
 
-/* ── 畫一張卡 ───────────────────────────────────────────── */
-function rowsHtml(list, cls, notes){
+/* ── 畫一張卡（d = 這張卡的「今日」，不一定是 base） ────────── */
+function rowsHtml(d, list, cls, notes){
   var h = '<div class="grp ' + cls + '">';
   for (var i = 0; i < list.length; i++){
-    var dt  = addDays(base, list[i].d);
+    var dt  = addDays(d, list[i].d);
     var hol = holidayOf(dt);
     if (hol) notes.push(md(dt) + " " + hol);
     h += '<div class="lb">' + list[i].lb + '</div>'
@@ -244,28 +270,29 @@ function rowsHtml(list, cls, notes){
   return h + '</div>';
 }
 
-function slipHtml(){
+function slipHtml(d){
   var notes = [];
-  var headHol = holidayOf(base);
+  var headHol = holidayOf(d);
 
   // 「今日」若本身就是假日，註記寫在下方；不塞進標題，否則兩位數月份會撐爆卡片寬度
-  if (headHol) notes.push(md(base) + " " + headHol);
+  if (headHol) notes.push(md(d) + " " + headHol);
 
+  // 「今日」是相對這張卡自己的日期說的（這張卡就是那天要用的），所以三天的卡都留著
   var head = '<div class="slip-head">'
            + '<span class="tag">今日 </span>'
-           + '<span class="big">' + md(base) + '</span>'
-           + '<span class="wd">（' + WD[base.getDay()] + '）</span>'
+           + '<span class="big">' + md(d) + '</span>'
+           + '<span class="wd">（' + WD[d.getDay()] + '）</span>'
            + '</div>';
 
-  var body = rowsHtml(GRP_W, 'grp-w', notes)
-           + rowsHtml(GRP_M, 'grp-m', notes)
-           + rowsHtml(GRP_X, 'grp-x', notes);
+  var body = rowsHtml(d, GRP_W, 'grp-w', notes)
+           + rowsHtml(d, GRP_M, 'grp-m', notes)
+           + rowsHtml(d, GRP_X, 'grp-x', notes);
 
   var note = '';
   if (notes.length){
     note = '<div class="slip-note' + (notes.length >= 3 ? ' tight' : '') + '">※ 休診：'
          + notes.join('、') + '</div>';
-  } else if (Number(key(addDays(base, 91))) > HOLIDAY_UNTIL){
+  } else if (Number(key(addDays(d, 91))) > HOLIDAY_UNTIL){
     note = '<div class="slip-note dim">※ 假日對照僅至 '
          + String(HOLIDAY_UNTIL).slice(0,4) + '/'
          + String(HOLIDAY_UNTIL).slice(4,6) + '/'
@@ -275,19 +302,34 @@ function slipHtml(){
   return '<div class="slip">' + head + body + note + '</div>';
 }
 
-/* ── 畫整份（一頁 6 張） ────────────────────────────────── */
+/* ── 畫整份（一頁 = DAYS 個看診日 × 每天 PER_DAY 張） ────── */
 function render(){
-  var slip = slipHtml(), html = '<div class="paper"><div class="page">';
-  for (var i = 0; i < COUNT; i++) html += slip;
+  var picked = clinicDays(base, DAYS), i;
+  var slips  = picked.days.map(slipHtml);
+
+  // grid 是 row-major 填格：每一列都照「第1天、第2天、第3天」重跑一次，
+  // 這樣同一「欄」的上下兩張才會是同一天。順序寫錯的話欄列會轉九十度。
+  var html = '<div class="paper"><div class="page" style="--cols:' + DAYS
+           + ';--rows:' + PER_DAY + '">';
+  for (var r = 0; r < PER_DAY; r++)
+    for (var c = 0; c < DAYS; c++) html += (slips[c] || '');
   document.getElementById('preview').innerHTML = html + '</div></div>';
 
+  // 選日期框顯示的是「使用者選的那天」，不是第一張卡的日期 ——
+  // 兩者不同時（選到休診日）由下方的跳過說明交代，比偷偷改掉她選的日期誠實。
   document.getElementById('d-pick').value = iso(base);
   document.getElementById('b-today').classList
     .toggle('on', key(base) === key(midnight(new Date())));
 
-  var w = document.getElementById('warn'), hol = holidayOf(base);
-  if (hol){ w.textContent = "⚠️ " + md(base) + " 是「" + hol + "」，這天休診。"; w.hidden = false; }
-  else { w.hidden = true; }
+  // 跳過了哪些日子要講清楚，否則護理師只會覺得「日期怎麼不連續」
+  var w = document.getElementById('warn');
+  if (picked.skipped.length){
+    w.textContent = "※ 已自動跳過休診日：" + picked.skipped.map(function(d){
+      var h = holidayOf(d);
+      return md(d) + "（" + WD[d.getDay()] + "）" + (h ? " " + h : "");
+    }).join("、");
+    w.hidden = false;
+  } else { w.hidden = true; }
 
   fit();
 }

@@ -127,10 +127,11 @@
   .grp{display:grid;grid-template-columns:max-content 1fr;column-gap:.3em;align-items:baseline}
   .grp .lb{text-align:right;white-space:nowrap}
   .grp .dt{white-space:nowrap;font-variant-numeric:tabular-nums}
-  /* 假日標記做成黑底反白：門診印表機多為黑白，紅字會變成看不出來的淡灰 */
-  .grp .hol{font-size:.4em;font-weight:700;margin-left:.2em;
-    background:#000;color:#fff;padding:.02em .2em .1em;border-radius:.15em;
-    vertical-align:.18em;letter-spacing:.02em}
+  /* 假日標記＝黑字加外框。⚠️ 不要用紅字（門診印表機多為黑白，紅色會印成看不出來的淡灰），
+     也不要改回黑底反白（使用者 2026-07-29 明講會浪費碳粉）。字級由 .4em 放大到 .5em。 */
+  .grp .hol{font-size:.5em;font-weight:700;margin-left:.2em;
+    border:1px solid #000;color:#000;padding:.02em .16em .08em;border-radius:.15em;
+    vertical-align:.16em;letter-spacing:.02em}
 
   .grp-w{font-size:1em;row-gap:.12em;margin-top:.50em}
   .grp-m{font-size:1.08em;font-weight:700;row-gap:.24em;margin-top:.63em}

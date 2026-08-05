@@ -106,43 +106,57 @@
   }
   .slip{
     /* 全部字級都由 --fs 這一個數字帶動（其餘用 em），要放大縮小改這裡就好。
-       實測上限 26.5pt（一頁 6 張時），再大就會爆框；現用 23pt。
-       ⚠️ 動這個數字之後一定要重量一次，別憑感覺調：卡住的是高度，
-          但 10–12 月兩位數日期加假日標記時會換成寬度先卡。 */
-    --fs:23pt;
+       ⚠️ 動這個數字之後一定要重量一次（730 天全掃，見 HANDOFF），別憑感覺調。
+       2026-08-05 護理師要求放大並置中：版面改成單一置中區塊後重量，
+       一頁 6 張的上限提高到 30pt，現用 28pt。
+       ⚠️ 卡住的是**寬度**（91天 + 兩位數日期 + 假日標記那一行最寬），不是高度。 */
+    --fs:28pt;
     border:1px solid #000; margin:-.5px 0 0 -.5px;   /* 相鄰邊框重疊成單線，好對齊裁切 */
     /* 上下留白用 em（跟著字級縮放），左右用 cm（那是裁切邊界，不該跟著字變） */
-    padding:.46em .24cm .33em .26cm;
-    display:flex; flex-direction:column;
+    padding:.46em .22cm .32em .22cm;
+    display:flex; flex-direction:column; align-items:center;   /* 置中（2026-08-05） */
     font-family:"Times New Roman","標楷體","DFKai-SB","BiauKai",serif;
-    font-size:var(--fs); color:#000; line-height:1.18; overflow:hidden;
+    font-size:var(--fs); color:#000; line-height:1.16; overflow:hidden;
   }
   /* 標題：日期是主角，「今日」退為小字 */
-  .slip-head{white-space:nowrap;letter-spacing:.01em;padding-bottom:.13em;
-    border-bottom:1.5px solid #000}
-  .slip-head .tag{font-size:.58em}
-  .slip-head .big{font-size:1.04em;font-weight:700}
-  .slip-head .wd{font-size:.69em;font-weight:700}
+  .slip-head{width:100%;text-align:center;white-space:nowrap;letter-spacing:.01em;
+    padding-bottom:.14em;border-bottom:1.5px solid #000}
+  .slip-head .tag{font-size:.56em}
+  .slip-head .big{font-size:1.06em;font-weight:700}
+  .slip-head .wd{font-size:.68em;font-weight:700}
 
-  .grp{display:grid;grid-template-columns:max-content 1fr;column-gap:.3em;align-items:baseline}
-  .grp .lb{text-align:right;white-space:nowrap}
-  .grp .dt{white-space:nowrap;font-variant-numeric:tabular-nums}
+  /* 七個日期排成「一整塊」置中的兩欄表：標籤靠右、日期靠左。
+     ⚠️ 刻意用同一個 grid 裝全部七列（不是三個獨立 grid）——
+        這樣 1W~91天 的日期會**垂直對齊在同一條線上**，整塊再一起置中。
+        拆成多個 grid 的話每組會各自置中，日期就對不齊了。 */
+  /* margin:auto 0 → 剩餘空白平均分到上下，日期區塊在卡片裡**垂直置中**（不會頭重腳輕）。
+     auto 只吃「多出來的」空間，位置不夠時自動變 0，所以不會因此爆框；
+     最小間距由 padding-top 保底。 */
+  .slip-body{display:grid;grid-template-columns:max-content max-content;
+    justify-content:center;column-gap:.34em;row-gap:.14em;align-items:baseline;
+    margin:auto 0;padding-top:.40em}
+  .slip-body .lb{text-align:right;white-space:nowrap}
+  .slip-body .dt{text-align:left;white-space:nowrap;font-variant-numeric:tabular-nums}
   /* 假日標記＝黑字加外框。⚠️ 不要用紅字（門診印表機多為黑白，紅色會印成看不出來的淡灰），
-     也不要改回黑底反白（使用者 2026-07-29 明講會浪費碳粉）。字級由 .4em 放大到 .5em。 */
-  .grp .hol{font-size:.5em;font-weight:700;margin-left:.2em;
+     也不要改回黑底反白（使用者 2026-07-29 明講會浪費碳粉）。 */
+  .slip-body .hol{font-size:.5em;font-weight:700;margin-left:.18em;
     border:1px solid #000;color:#000;padding:.02em .16em .08em;border-radius:.15em;
     vertical-align:.16em;letter-spacing:.02em}
 
-  .grp-w{font-size:1em;row-gap:.12em;margin-top:.50em}
-  .grp-m{font-size:1.08em;font-weight:700;row-gap:.24em;margin-top:.63em}
-  .grp-x{font-size:1.08em;font-weight:700;margin-top:.53em;padding-top:.22em;
-    border-top:1px solid #000}
+  .r-w{font-size:1em}
+  .r-m{font-size:1.06em;font-weight:700}
+  .r-x{font-size:1.06em;font-weight:700}
+  .gap-m{margin-top:.26em}                     /* 1W~3W 與 1M~3M 之間的呼吸 */
+  .slip-body .rule{grid-column:1/-1;border-top:1px solid #000;margin:.22em 0 .20em}
 
-  .slip-note{margin-top:auto;font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;
-    font-size:.40em;font-weight:700;color:#000;line-height:1.35;padding-top:.35em;
+  /* 休診註記是註腳不是主角，字級刻意小：它換到第二行時就是整張卡爆框的主因
+     （2026-08-05 放大到 28pt 時實測出來的，別再調大）。 */
+  .slip-note{width:100%;text-align:center;   /* 靠 .slip-body 的 auto 邊距把它推到底，不再自己 margin-top:auto */
+    font-family:"PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;
+    font-size:.34em;font-weight:700;color:#000;line-height:1.3;padding-top:.30em;
     border-top:1px dashed #000}
-  .slip-note.dim{color:#8C97A6;font-weight:400;font-size:.35em;border-top-color:#B9C1CC}
-  .slip-note.tight{font-size:.365em;line-height:1.28}  /* 一次撞到三個以上假日時縮一點 */
+  .slip-note.dim{color:#8C97A6;font-weight:400;font-size:.30em;border-top-color:#B9C1CC}
+  .slip-note.tight{font-size:.30em;line-height:1.26}  /* 一次撞到三個以上假日時再縮 */
 
   @media (prefers-reduced-motion:reduce){*{transition:none !important}}
 
@@ -275,16 +289,20 @@ if (qd.length === 3 && qd.every(function(x){ return /^\d+$/.test(x); })){
 }
 
 /* ── 畫一張卡（d = 這張卡的「今日」，不一定是 base） ────────── */
-function rowsHtml(d, list, cls, notes){
-  var h = '<div class="grp ' + cls + '">';
+/* 產生若干「標籤／日期」列，直接放進 .slip-body 這個共用 grid（不再各自包一層），
+   這樣三個群組的日期才會對齊在同一條垂直線上。
+   firstGap：加在該群組第一列上的間距 class，用來分隔群組。 */
+function rowsHtml(d, list, cls, notes, firstGap){
+  var h = '';
   for (var i = 0; i < list.length; i++){
     var dt  = addDays(d, list[i].d);
     var hol = holidayOf(dt);
     if (hol) notes.push(md(dt) + " " + hol);
-    h += '<div class="lb">' + list[i].lb + '</div>'
-       + '<div class="dt">' + md(dt) + (hol ? '<span class="hol">假</span>' : '') + '</div>';
+    var c = cls + (i === 0 && firstGap ? ' ' + firstGap : '');
+    h += '<div class="lb ' + c + '">' + list[i].lb + '</div>'
+       + '<div class="dt ' + c + '">' + md(dt) + (hol ? '<span class="hol">假</span>' : '') + '</div>';
   }
-  return h + '</div>';
+  return h;
 }
 
 function slipHtml(d){
@@ -301,9 +319,12 @@ function slipHtml(d){
            + '<span class="wd">（' + WD[d.getDay()] + '）</span>'
            + '</div>';
 
-  var body = rowsHtml(d, GRP_W, 'grp-w', notes)
-           + rowsHtml(d, GRP_M, 'grp-m', notes)
-           + rowsHtml(d, GRP_X, 'grp-x', notes);
+  var body = '<div class="slip-body">'
+           + rowsHtml(d, GRP_W, 'r-w', notes)
+           + rowsHtml(d, GRP_M, 'r-m', notes, 'gap-m')
+           + '<div class="rule"></div>'
+           + rowsHtml(d, GRP_X, 'r-x', notes)
+           + '</div>';
 
   var note = '';
   if (notes.length){

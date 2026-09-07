@@ -94,6 +94,45 @@ Dropbox 已從個人帳號變成**團隊帳號**（`屏東縣慢性病防治整�
 
 ---
 
+## 二之二、後續追加發現（2026-09-07）
+
+Obsidian 開啟時掉回「選擇儲存庫」畫面，追下去發現路徑問題比原本盤點的更深一層：
+
+| # | 位置 | 問題 |
+|---|---|---|
+| 9 | `~/.claude/settings.json` → `mcpServers.obsidian.args` | 寫死 `/Users/lichunying/Dropbox/secondbrain`，**兩層都錯**（缺 CloudStorage、缺 `Lee Chunying/`） |
+| 10 | Obsidian 本身的 vault 設定 | 指著舊路徑，開不起來，退回歡迎畫面 |
+| 11 | `~/.claude/projects/<路徑衍生名>/memory/` | **專案長期記憶用「路徑」當資料夾名**，路徑一改就整包被孤立 |
+
+第 11 點是這次最容易被忽略的。雲端備份裡並排躺著兩代，正是前兩次搬家留下的：
+
+```
+-Users-_USER_-Dropbox-secondbrain                       ← ~/Dropbox 時代
+-Users-_USER_-Library-CloudStorage-Dropbox-secondbrain  ← CloudStorage 時代（4/12，最新）
+```
+
+改成 `Lee Chunying/` 後會再生出第三代空資料夾，先前累積的記憶就接不上。
+
+`mcpServers.obsidian-ide`（`mcp-remote http://localhost:22360/sse`）沒有路徑，
+只要 Obsidian 把 vault 開回來就自動恢復，不用改。
+
+### 修復腳本 `fix-paths.sh`
+
+一次處理第 9、11 點並檢查第 10 點，已同時放在
+`/Lee Chunying/.claude-sync/fix-paths.sh`，兩台 Mac 各跑一次：
+
+```bash
+bash ~/Library/CloudStorage/Dropbox/Lee\ Chunying/.claude-sync/fix-paths.sh --dry-run  # 先看
+bash ~/Library/CloudStorage/Dropbox/Lee\ Chunying/.claude-sync/fix-paths.sh            # 再跑
+```
+
+設計原則：settings.json 先備份再改；記憶是**複製**不是搬移，舊資料夾原封不動；
+可重複執行；指令失敗會停下來報錯而不是靜靜跳過。
+
+已驗證：自動挑最新那代記憶、時間戳保留、內容逐檔比對一致、重跑不出錯。
+
+---
+
 ## 三、不受影響的部分
 
 - **Notion**（待辦 DB、演講 DB、Routine DB）、**Google Calendar**、**Gmail** — 與 Dropbox 無關，完全不受影響。

@@ -13,15 +13,17 @@
 #   - 對話紀錄 *.jsonl   （每台電腦獨立）
 #   - sessions / shell-snapshots / telemetry / ide / backups
 #   - tool-results / session-env
+#   - skills/           （技能檔不走這裡，要在 claude.ai 與各機 ~/.claude/skills/ 各自更新）
 #
 # 跨使用者名稱：
 #   雲端用 `_USER_` 佔位符取代本機使用者名稱，所以兩台 Mac 即使
 #   帳號名稱不同（例：chun-yinglee vs lichunying）也能正確對應。
 #
-# 2026-09 修正：Dropbox 改為團隊帳號後，個人資料改掛在「Lee Chunying」
+# 2026-09-07 修正：Dropbox 改為團隊帳號後，個人資料改掛在「Lee Chunying」
 #   這層底下，且 macOS 走 ~/Library/CloudStorage/。原本寫死的
-#   $HOME/Dropbox/.claude-sync 會找不到路徑，改為自動偵測，
-#   避免日後 Dropbox 再次調整掛載方式時又整個斷掉。
+#   $HOME/Dropbox/.claude-sync 會找不到路徑（上次成功同步停在 2026-04），
+#   改為自動偵測，避免日後 Dropbox 再次調整掛載方式時又整個斷掉。
+#   舊版備份：sync.sh.bak-20260907
 
 set -e
 

@@ -73,12 +73,18 @@ Dropbox 已從個人帳號變成**團隊帳號**（`屏東縣慢性病防治整�
 | 5 | `make-presentation/SKILL.md` | 40 | 素材位置標成 `/Lee Chunying/演講與寫作/` |
 | 6 | `fm-residency-accreditation-review/SKILL.md` | 639 | 主檔改成完整路徑，避免相對路徑歧義 |
 
-### B. Dropbox 裡的同步腳本（修正檔放在本資料夾）
+### B. Dropbox 裡的同步腳本 ✅ 已於 2026-09-07 部署
 
-| # | 檔案 | 問題 | 修正 |
+| # | 檔案 | 問題 | 處理 |
 |---|---|---|---|
-| 7 | `/Lee Chunying/.claude-sync/sync.sh` | 第 24 行 `SHARED="$HOME/Dropbox/.claude-sync"` 寫死舊路徑 → 整支腳本掛掉 | 見 `sync.sh`：改成**自動偵測**，不再寫死 |
-| 8 | `/Lee Chunying/.claude-sync/README.md` | 安裝說明與進度筆記路徑都還是 `~/Dropbox/…` | 見 `claude-sync-README.md` |
+| 7 | `/Lee Chunying/.claude-sync/sync.sh` | 第 24 行 `SHARED="$HOME/Dropbox/.claude-sync"` 寫死舊路徑 → 整支腳本掛掉 | ✅ 已換成自動偵測版；舊檔留存為 `sync.sh.bak-20260907` |
+| 8 | `/Lee Chunying/.claude-sync/README.md` | 安裝說明與進度筆記路徑都還是 `~/Dropbox/…` | ✅ 已更新；舊檔留存為 `README.md.bak-20260907` |
+
+> 本資料夾的 `sync.sh` 與 `claude-sync-README.md` 即為實際部署的版本存檔。
+
+**同步已停擺 5 個月**：雲端 `.claude-sync/data/` 的內容全部停在 2026-04
+（最後一筆 `plans/tranquil-knitting-octopus.md` 是 2026-04-12），
+與 `sync.sh` 失效的時間吻合。
 
 `sync.sh` 的修法不是換一個新的寫死路徑，而是依序試 4 個候選位置
 （CloudStorage 版 / 舊版、有無 `Lee Chunying/` 這層），
@@ -114,8 +120,9 @@ Dropbox 已從個人帳號變成**團隊帳號**（`屏東縣慢性病防治整�
 2. **Mac 上的 `~/.claude/skills/`**（Claude Code 桌機版）
    同樣 6 個檔；兩台 Mac 都要，或改完跑一次 `claude-sync`。
 
-3. **把本資料夾的 `sync.sh` 和 `claude-sync-README.md` 覆蓋回 Dropbox**
-   `/Lee Chunying/.claude-sync/`。覆蓋前先確認一下本機 Dropbox 實際路徑：
+3. ~~把 `sync.sh` 和 `claude-sync-README.md` 寫回 Dropbox~~ ✅ **已完成**
+
+   重跑前先確認本機 Dropbox 實際路徑：
 
    ```bash
    ls -d ~/Library/CloudStorage/Dropbox/*/ 2>/dev/null
@@ -123,6 +130,11 @@ Dropbox 已從個人帳號變成**團隊帳號**（`屏東縣慢性病防治整�
 
    應該會看到 `Lee Chunying/`、`114年…/`、`115年…/`。
    若實際不同，`sync.sh` 的自動偵測仍會處理，或用 `DROPBOX_HOME` 指定。
+
+   ⚠️ **第一次重跑請挑資料最新的那台 Mac**，讓它先把新狀態推上去；
+   雲端停在 4 月，`rsync -au` 不會用舊蓋新，但雲端有、本機沒有的舊檔會被拉下來。
+
+   另外注意：**這支腳本不同步技能檔**，所以第 1、2 點還是得自己做。
 
 4. **確認 Obsidian vault 路徑**
    Obsidian 若還指著舊的 `…/Dropbox/secondbrain`，開啟時會找不到 vault。
